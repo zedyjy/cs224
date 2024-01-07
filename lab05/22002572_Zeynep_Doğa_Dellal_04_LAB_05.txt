@@ -1,0 +1,722 @@
+CS224
+Lab No:05
+Section No:04
+Zeynep Doğa Dellal
+22002572
+24/11/2023
+
+module basys3(input  logic clk, reset, clk_button,  
+          output logic [6:0]seg,
+	     output logic [3:0]an,
+	     output logic dp,	     
+	     output logic MemWriteD, RegWriteD
+    );
+    
+    logic[31:0]instrF,PC, PCF;
+    logic PcSrcD; 
+    logic ForwardAD;
+    logic ForwardBD;
+    logic MemtoRegD;
+    logic ALUSrcD;
+    logic [2:0]  alucontrol;
+    logic [31:0] instrD, ALUOutE, WriteDataE;
+    logic [1:0] ForwardAE, ForwardBE;
+    logic [31:0] SrcAE,SrcBE;
+    logic BranchD;
+    logic ALURDSrc;
+    logic RegDstD;
+    
+   display_controller display(clk,PCF[7:4],PCF[3:0],instrF[7:4],instrF[3:0], seg, dp,an );
+   pulse_controller clkres(clk, reset, 1'b0,reset_new);
+   pulse_controller clkbut(clk, clk_button, 1'b0,clk_new);
+    
+    topMips  topMipFile(clk_new, reset_new,instrF,PC, PCF,PcSrcD, MemWriteD, MemtoRegD, ALUSrcD, BranchD, RegDstD, RegWriteD,
+             alucontrol,instrD, ALUOutE, WriteDataE, ForwardAE, ForwardBE,
+             ForwardAD, ForwardBD,SrcAE,SrcBE,ALURDSrc);
+endmodule
+
+
+
+module display_controller(
+input clk,
+input [3:0] in3, in2, in1, in0,
+output [6:0]seg, logic dp,
+output [3:0] an
+);
+
+localparam N = 18;
+
+logic [N-1:0] count = {N{1'b0}};
+always@ (posedge clk)
+count <= count + 1;
+
+logic [4:0]digit_val;
+
+logic [3:0]digit_en;
+always@ (*)
+
+begin
+digit_en = 4'b1111;
+digit_val = in0;
+
+case(count[N-1:N-2])
+
+2'b00 :	//select first 7Seg.
+
+begin
+digit_val = {1'b0, in0};
+digit_en = 4'b1110;
+end
+
+2'b01:	//select second 7Seg.
+
+begin
+digit_val = {1'b0, in1};
+digit_en = 4'b1101;
+end
+
+2'b10:	//select third 7Seg.
+
+begin
+digit_val = {1'b0, in2};
+digit_en = 4'b1011;
+end
+
+2'b11:	//select forth 7Seg.
+
+begin
+digit_val = {1'b0, in3};
+digit_en = 4'b0111;
+end
+endcase
+end
+
+//Convert digit number to LED vector. LEDs are active low.
+
+logic [6:0] sseg_LEDs;
+always @(*)
+begin
+sseg_LEDs = 7'b1111111; //default
+case( digit_val)
+5'd0 : sseg_LEDs = 7'b1000000; //to display 0
+5'd1 : sseg_LEDs = 7'b1111001; //to display 1
+5'd2 : sseg_LEDs = 7'b0100100; //to display 2
+5'd3 : sseg_LEDs = 7'b0110000; //to display 3
+5'd4 : sseg_LEDs = 7'b0011001; //to display 4
+5'd5 : sseg_LEDs = 7'b0010010; //to display 5
+5'd6 : sseg_LEDs = 7'b0000010; //to display 6
+5'd7 : sseg_LEDs = 7'b1111000; //to display 7
+5'd8 : sseg_LEDs = 7'b0000000; //to display 8
+5'd9 : sseg_LEDs = 7'b0010000; //to display 9
+5'd10: sseg_LEDs = 7'b0001000; //to display a
+5'd11: sseg_LEDs = 7'b0000011; //to display b
+5'd12: sseg_LEDs = 7'b1000110; //to display c
+5'd13: sseg_LEDs = 7'b0100001; //to display d
+5'd14: sseg_LEDs = 7'b0000110; //to display e
+5'd15: sseg_LEDs = 7'b0001110; //to display f
+5'd16: sseg_LEDs = 7'b0110111; //to display "="
+default : sseg_LEDs = 7'b0111111; //dash 
+endcase
+end
+
+assign an = digit_en;
+
+assign seg = sseg_LEDs;
+assign dp = 1'b1; //turn dp off
+
+endmodule
+
+module pulse_controller(
+	input logic CLK, sw_input, clear,
+	output logic clk_pulse );
+
+	 logic [2:0] state, nextstate;
+	 logic [30:0] CNT; 
+	 logic cnt_zero; 
+
+	always @ (posedge CLK, posedge clear)
+	   if(clear)
+	    	state <=3'b000;
+	   else
+	    	state <= nextstate;
+
+	always @ (sw_input, state, cnt_zero)
+          case (state)
+             3'b000: begin if (sw_input) nextstate = 3'b001; 
+                           else nextstate = 3'b000; clk_pulse = 0; end	     
+             3'b001: begin nextstate = 3'b010; clk_pulse = 1; end
+             3'b010: begin if (cnt_zero) nextstate = 3'b011; 
+                           else nextstate = 3'b010; clk_pulse = 1; end
+             3'b011: begin if (sw_input) nextstate = 3'b011; 
+                           else nextstate = 3'b100; clk_pulse = 0; end
+             3'b100: begin if (cnt_zero) nextstate = 3'b000; 
+                           else nextstate = 3'b100; clk_pulse = 0; end
+            default: begin nextstate = 3'b000; clk_pulse = 0; end
+          endcase
+
+	always @(posedge CLK)
+	   case(state)
+		3'b001: CNT <= 100000000;
+		3'b010: CNT <= CNT-1;
+		3'b011: CNT <= 100000000;
+		3'b100: CNT <= CNT-1;
+	   endcase
+
+//  reduction operator |CNT gives the OR of all bits in the CNT register	
+	assign cnt_zero = ~|CNT;
+
+endmodule
+
+// You can add some more logic variables for testing purposes
+// but you cannot remove existing variables as we need you to output 
+// these values on the waveform for grading
+module topMips (input  logic        clk, reset,
+             output  logic[31:0]  instrF,
+             output logic[31:0] PC, PCF,
+             output logic PcSrcD,
+             output logic MemWriteD, MemtoRegD, ALUSrcD, BranchD, RegDstD, RegWriteD,
+             output logic [2:0]  alucontrol,
+             output logic [31:0] instrD, 
+             output logic [31:0] ALUOutE, WriteDataE,
+             output logic [1:0] ForwardAE, ForwardBE,
+             output logic ForwardAD, ForwardBD,
+             output logic [31:0] SrcAE,SrcBE, 
+             output logic ALURDSrc );
+
+    logic [31:0] instr;
+	// ********************************************************************
+	// Below, instantiate a controller and a datapath with their new (if modified) signatures
+	// and corresponding connections.
+	// ********************************************************************
+
+	
+	
+	controller controllerTM(instrD[31:26], instrD[5:0],MemtoRegD, MemWriteD,ALUSrcD,RegDstD, RegWriteD, alucontrol,BranchD, ALURDSrc);
+	     
+	  datapath dpTM (clk, reset,alucontrol,RegWriteD, MemtoRegD, MemWriteD, ALUSrcD, RegDstD, BranchD,ALURDSrc, instrF,		
+                 instrD, PC, PCF, PcSrcD, ALUOutE, WriteDataE,ForwardAE, ForwardBE,ForwardAD, ForwardBD, SrcAE,SrcBE );  
+       imem imem1(PCF[5:0],instr);
+
+endmodule
+
+module PipeFtoD(input logic[31:0] instr, PcPlus4F,
+                input logic EN, clk,		// StallD will be connected as this EN
+                output logic[31:0] instrD, PcPlus4D);
+
+                always_ff @(posedge clk)
+                    if(EN)
+                        begin
+                        instrD<=instr;
+                        PcPlus4D<=PcPlus4F;
+                        end
+                
+endmodule
+module PipeWtoF(input logic[31:0] PC,
+                input logic EN, clk,		// StallF will be connected as this EN
+                output logic[31:0] PCF);
+
+                always_ff @(posedge clk)
+                    if(EN)
+                        begin
+                        PCF<=PC;
+                        end
+                
+endmodule
+// *******************************************************************************
+// Below, write the modules for the pipes PipeDtoE, PipeEtoM, PipeMtoW yourselves.
+// Don't forget to connect Control signals in these pipes as well.
+// *******************************************************************************
+module PipeDtoE(input logic[31:0] RD1, RD2, SignImmD,
+                input logic[4:0] RsD, RtD, RdD,
+                input logic RegWriteD, MemtoRegD, MemWriteD, ALUSrcD, RegDstD,
+                input logic[2:0] ALUControlD,
+                input logic clear, clk, reset,
+                output logic[31:0] RsData, RtData, SignImmE,
+                output logic[4:0] RsE, RtE, RdE, 
+                output logic RegWriteE, MemtoRegE, MemWriteE, ALUSrcE, RegDstE,
+                output logic[2:0] ALUControlE);
+
+        always_ff @(posedge clk, posedge reset)
+          if(reset || clear)
+                begin
+                // Control signals
+                RegWriteE <= 0;
+                MemtoRegE <= 0;
+                MemWriteE <= 0;
+                ALUControlE <= 0;
+                ALUSrcE <= 0;
+                RegDstE <= 0;
+                
+                // Data
+                RsData <= 0;
+                RtData <= 0;
+                RsE <= 0;
+                RtE <= 0;
+                RdE <= 0;
+                SignImmE <= 0;
+                end
+            else
+                begin
+                // Control signals
+                RegWriteE <= RegWriteD;
+                MemtoRegE <= MemtoRegD;
+                MemWriteE <= MemWriteD;
+                ALUControlE <= ALUControlD;
+                ALUSrcE <= ALUSrcD;
+                RegDstE <= RegDstD;
+                
+                // Data
+                RsData <= RD1;
+                RtData <= RD2;
+                RsE <= RsD;
+                RtE <= RtD;
+                RdE <= RdD;
+                SignImmE <= SignImmD;
+                end
+endmodule
+
+module PipeEtoM(input logic clk, reset,
+                input logic [4:0] WriteRegE,
+                input logic [31:0]ALUOutE,
+                input logic RegWriteE, MemtoRegE, MemWriteE,
+                input logic [31:0] WriteDataE,
+                output logic [31:0]ALUOutM,
+                output logic [31:0]WriteDataM,
+                output logic [4:0] WriteRegM,
+                output logic RegWriteM, MemtoRegM, MemWriteM
+                 );
+        always_ff @(posedge clk, posedge reset)
+          if(reset)
+                begin
+                // Control signals indicated
+                RegWriteM <= 0;
+                MemWriteM <= 0;
+                ALUOutM <= 0;
+                MemtoRegM <= 0;
+                WriteDataM <= 0;
+                WriteRegM <= 0;
+                // Data
+                end
+            else
+                begin
+                ALUOutM <= ALUOutE;
+                WriteRegM <= WriteRegE;
+                WriteDataM <= WriteDataE;
+                MemtoRegM <= MemtoRegE;
+                MemWriteM <= MemWriteE;
+                RegWriteM <= RegWriteE;
+                end 
+endmodule
+
+module PipeMtoW  (input logic clk, reset,
+  input logic RegWriteM, MemtoRegM,
+  input logic [31:0] ReadDataM, ALUOutM,
+  input logic [4:0] WriteRegM,
+  output logic RegWriteW, MemtoRegW,
+  output logic [31:0] ReadDataW, ALUOutW,
+  output logic [4:0] WriteRegW);
+  always_ff @(posedge clk, posedge reset) begin
+    if (reset) begin
+      // Reset all signals
+      RegWriteW = 0;
+      MemtoRegW = 0;
+      ReadDataW = 0;
+      ALUOutW = 0;
+      WriteRegW = 0;
+    end 
+else begin
+      // Update control unit signals
+      RegWriteW <= RegWriteM;
+      MemtoRegW <= MemtoRegM;
+      // Update memory stage values
+      ReadDataW <= ReadDataM;
+      ALUOutW <= ALUOutM;
+      WriteRegW <= WriteRegM;
+    end
+endmodule
+module datapath (input  logic clk, reset, RegWriteW,
+		         input  logic[2:0]  ALUControlD,
+		         input logic BranchD,
+		         input logic [31:0] pcPlus4D,
+		         input logic [31:0] ResultW,
+		         input logic [4:0] rsD,rtD,rdD,	
+		         input logic [15:0] immD,		         // Add input-outputs if necessary
+		         input logic [4:0] WriteRegW,			
+		         output logic RegWriteE,MemToRegE,MemWriteE,                 
+                 	output logic[31:0] ALUOutE, WriteDataE,
+                 	output logic [4:0] WriteRegE,
+                 	output logic [31:0] PCBranchE,
+                 	output logic pcSrcE); 
+logic [31:0] PcSrcA, PcSrcB, ALUOutE;
+ logic [31:0] PcBranchD, PcPlus4F, equll, equl2, adOut;	
+logic StallF, zero;
+//* You should define others down below
+    logic [4:0]WriteRegW;
+    logic [31:0] PcPlus4D;
+    logic [31:0]SignImmD, adderIn;
+    logic [31:0]RD1, RD2, RD3, ResultW;
+    logic StallD;
+    logic equalD;
+    logic ALURDSrcE;
+    //Pipe 3   
+    logic[2:0] ALUControlE;
+    logic[4:0] RsE, RtE, RdE, WriteRegE;
+    logic RegWriteE; 
+    logic MemtoRegE;
+    logic MemWriteE;
+    logic ALUSrcE;
+    logic RegDstE;
+logic[31:0] RsData, RtData,RdData, SignImmE, ALUOutM;
+//Pipe 4
+logic [4:0] WriteRegM;
+logic RegWriteM;
+logic MemtoRegM; 
+logic MemWriteM;
+logic[31:0] WriteDataM, ReadDataM;
+
+ //Pipe5
+logic MemtoRegW;
+logic RegWriteW;
+logic[31:0] ALUOutW,ReadDataW;
+//hazardnuit 
+logic FlushE;
+// Pipeline Stage 1: Fetch (F)
+    PipeWtoF pipe1(PC, ~StallF, clk, reset, PCF);
+    adder adder2(PCF, 32'd4, PcPlus4F);
+    mux2 #(32) pc_mux(PcPlus4F, PcBranchD, PCSrcD, PC);
+
+    // Pipeline Stage 2: Decode (D)
+    PipeFtoD pipeNumber2(instrF, PcPlus4F, ~StallD, PCSrcD, clk, reset, instrD, PcPlus4D);
+    regfile rf1(clk, reset, RegWriteD, instrD[25:21], instrD[20:16], WriteRegW, ResultW, RD1, RD2, RD3); 
+    signext signext1(instrD[15:0], SignImmD);
+    sl2 sl1(SignImmD, adderIn);
+    adder adder3(adderIn, PcPlus4D, PcBranchD);
+    mux2 #(32) muxeqNumber1(RD1, ALUOutM, ForwardAD, equll );
+    mux2 #(32) muxeqNumber2(RD2, ALUOutM, ForwardBD, equl2 );
+    assign equalD = (equll == equl2) ? 1 : 0;
+    assign PCSrcD = (equalD & BranchD);
+
+    // Pipeline Stage 3: Execute (E)
+    PipeDtoE pipeNumber3(RD1, RD2, RD3, SignImmD, instrD[25:21], instrD[20:16], instrD[15:11], RegWriteD, MemtoRegD, MemWriteD, ALUSrcD, RegDstD, ALUControlD, clk, reset, RsData, RtData, SignImmE, RsE, RtE, RdE, RegWriteE, MemtoRegE, MemWriteE, ALUSrcE, RegDstE, ALUControlE);                     
+    mux2 #(5) muxDE1(RtE, RdE, RegDstE, WriteRegE );
+    mux4 #(32) muxDE2(RsData, ResultW, ALUOutM, 0, ForwardAE, SrcAE );
+    mux4 #(32) muxDE3(RtData, ResultW, ALUOutM, 0, ForwardBE, WriteDataE );
+    mux2 #(32) muxDE4(WriteDataE, SignImmE, ALUSrcE, SrcBE );
+    alu aluDE(SrcAE, SrcBE, ALUControlE, ALUOutE, zero);
+    mux2 #(32) muxsracDE(ALUOutE, adOut, ALURDSrcE, ALUOutEMod );
+    adder adder5(RdData, ALUOutE, adOut); 
+
+    // Pipeline Stage 4: Memory (M)
+    PipeEtoM pipeNumber4(clk, reset, WriteRegE, ALUOutEMod, RegWriteE, MemtoRegE, MemWriteE, WriteDataE, ALUOutM, WriteDataM, WriteRegM, RegWriteM, MemtoRegM, MemWriteM);
+    dmem dmem1(clk, MemWriteM, ALUOutM, WriteDataM, ReadDataM);
+
+    // Pipeline Stage 5: Write Back (W)
+    PipeMtoW pipeNumber5(clk, reset, RegWriteM, MemtoRegM, ALUOutM, WriteRegM, ReadDataM, RegWriteW, MemtoRegW, WriteRegW, ALUOutW, ReadDataW);       
+    mux2 #(32) muxNumber5(ALUOutW, ReadDataW, MemtoRegW, ResultW );
+    // Hazard Unit
+    HazardUnit unitofHazard(RegWriteW, BranchD, WriteRegW, WriteRegE, RegWriteM, MemtoRegM, WriteRegM, RegWriteE, MemtoRegE, RsE, RtE, instrD[25:21], instrD[20:16], ForwardAE, ForwardBE, FlushE, StallD, StallF, ForwardAD, ForwardBD);
+endmodule
+
+module HazardUnit( input logic RegWriteW,
+                input logic [4:0] WriteRegW,
+                input logic RegWriteM,MemToRegM,
+                input logic [4:0] WriteRegM,
+                input logic RegWriteE,MemToRegE,
+                input logic [4:0] rsE,rtE,
+                input logic [4:0] rsD,rtD,
+                output logic [2:0] ForwardAE,ForwardBE,
+                output logic FlushE,StallD,StallF
+    );
+    always_comb 
+	begin
+	   if ((rsE != 0) & (rsE == WriteRegM) & RegWriteM)
+        begin
+         ForwardAE = 2'b10;
+        end
+        else if ((rsE != 0) & (rsE == WriteRegW) & RegWriteW)
+        begin
+            ForwardAE = 2'b01;
+        end
+        else
+        begin
+            ForwardAE = 2'b00;
+        end  
+        if ((rtE != 0) & (rtE == WriteRegM) & RegWriteM)
+        begin
+         ForwardBE = 2'b10;
+        end
+        else if ((rtE != 0) & (rtE == WriteRegW) & RegWriteW)
+        begin
+            ForwardBE = 2'b01;
+        end
+        else
+        begin
+            ForwardBE = 2'b00;
+        end     
+        lwstall <= ((rsD== rtE) | (rtD== rtE)) & MemtoRegE;
+        StallF <= lwstall;
+        StallD <= lwstall;
+        FlushE <= lwstall;
+        ForwardAD <= ((rsD != 0) & (rsD == WriteRegM)) & (RegWriteM);
+        ForwardBD <= ((rtD != 0) & (rtD == WriteRegM)) & (RegWriteM);      
+        end
+endmodule
+
+module mips (input  logic        clk, reset,
+             output logic[31:0]  pc,
+             input  logic[31:0]  instr,
+             output logic        memwrite,
+             output logic[31:0]  aluout, resultW,
+             output logic[31:0] instrOut,
+             input  logic[31:0]  readdata);
+
+  logic        memtoreg, pcsrc, zero, alusrc, regdst, regwrite, jump;
+  logic [2:0]  alucontrol;
+  assign instrOut = instr;
+controller controllerTM(instrD[31:26], instrD[5:0],MemtoRegD, MemWriteD,ALUSrcD,RegDstD, RegWriteD, alucontrol,BranchD, ALURDSrc);
+datapath dpTM (clk, reset,alucontrol,RegWriteD, MemtoRegD, MemWriteD, ALUSrcD, RegDstD, BranchD,ALURDSrc, instrF, instrD, PC, PCF, PcSrcD, ALUOutE, WriteDataE,ForwardAE, ForwardBE,ForwardAD, ForwardBD, SrcAE,SrcBE );  
+imem imem1(PCF[5:0],instr);
+endmodule
+module imem ( input logic [5:0] addr, output logic [31:0] instr);
+// imem is modeled as a lookup table, a stored-program byte-addressable ROM
+	always_comb
+	   case ({addr,2'b00})		   	// word-aligned fetch
+//
+// 	***************************************************************************
+//	Here, you can paste your own test cases that you prepared for the part 1-g.
+//	Below is a program from the single-cycle lab.
+//	***************************************************************************
+//
+//		address		instruction
+//		-------		-----------
+		8'h00: instr = 32'h20020005;  	// disassemble, by hand 
+		8'h04: instr = 32'h2003000c;  	// or with a program,
+		8'h08: instr = 32'h2067fff7;  	// to find out what
+		8'h0c: instr = 32'h00e22025;  	// this program does!
+		8'h10: instr = 32'h00642824;
+		8'h14: instr = 32'h00a42820;
+		8'h18: instr = 32'h10a7000a;
+		8'h1c: instr = 32'h0064202a;
+		8'h20: instr = 32'h10800001;
+		8'h24: instr = 32'h20050000;
+		8'h28: instr = 32'h00e2202a;
+		8'h2c: instr = 32'h00853820;
+		8'h30: instr = 32'h00e23822;
+		8'h34: instr = 32'hac670044;
+		8'h38: instr = 32'h8c020050;
+		8'h3c: instr = 32'h08000011;
+		8'h40: instr = 32'h20020001;
+		8'h44: instr = 32'hac020054;
+		8'h48: instr = 32'h08000012;	// j 48, so it will loop here
+	     default:  instr = {32{1'bx}};	// unknown address
+	   endcase
+endmodule
+module controller(input  logic[5:0] op, funct,
+                  output logic     memtoreg, memwrite,
+                  output logic     alusrc,
+                  output logic     regdst, regwrite,
+                  output logic     jump,
+                  output logic[2:0] alucontrol,
+                  output logic branch);
+
+   logic [1:0] aluop;
+
+   maindec md (op, memtoreg, memwrite, branch, alusrc, regdst, regwrite, 
+         jump, aluop);
+
+   aludec  ad (funct, aluop, alucontrol);
+
+endmodule
+
+// External data memory used by MIPS single-cycle processor
+
+module dmem (input  logic        clk, we,
+             input  logic[31:0]  a, wd,
+             output logic[31:0]  rd);
+
+   logic  [31:0] RAM[63:0];
+  
+   assign rd = RAM[a[31:2]];    // word-aligned  read (for lw)
+
+   always_ff @(posedge clk)
+     if (we)
+       RAM[a[31:2]] <= wd;      // word-aligned write (for sw)
+
+endmodule
+
+module maindec (input logic[5:0] op, 
+	              output logic memtoreg, memwrite, branch,
+	              output logic alusrc, regdst, regwrite, jump,
+	              output logic[1:0] aluop );
+   logic [8:0] controls;
+
+   assign {regwrite, regdst, alusrc, branch, memwrite,
+                memtoreg,  aluop, jump} = controls;
+
+  always_comb
+    case(op)
+      6'b000000: controls <= 9'b110000100; // R-type
+      6'b100011: controls <= 9'b101001000; // LW
+      6'b101011: controls <= 9'b001010000; // SW
+      6'b000100: controls <= 9'b000100010; // BEQ
+      6'b001000: controls <= 9'b101000000; // ADDI
+      6'b000010: controls <= 9'b000000001; // J
+      default:   controls <= 9'bxxxxxxxxx; // illegal op
+    endcase
+endmodule
+
+module aludec (input    logic[5:0] funct,
+               input    logic[1:0] aluop,
+               output   logic[2:0] alucontrol);
+  always_comb
+    case(aluop)
+      2'b00: alucontrol  = 3'b010;  // add  (for lw/sw/addi)
+      2'b01: alucontrol  = 3'b110;  // sub   (for beq)
+      default: case(funct)          // R-TYPE instructions
+          6'b100000: alucontrol  = 3'b010; // ADD
+          6'b100010: alucontrol  = 3'b110; // SUB
+          6'b100100: alucontrol  = 3'b000; // AND
+          6'b100101: alucontrol  = 3'b001; // OR
+          6'b101010: alucontrol  = 3'b111; // SLT
+          default:   alucontrol  = 3'bxxx; // ???
+        endcase
+    endcase
+endmodule
+
+module regfile (input    logic clk, we3, 
+                input    logic[4:0]  ra1, ra2, wa3, 
+                input    logic[31:0] wd3, 
+                output   logic[31:0] rd1, rd2);
+
+  logic [31:0] rf [31:0];
+  // three ported register file: read two ports combinationally
+  // write third port on rising edge of clock. Register0 hardwired to 0.
+  always_ff @(negedge clk)
+     if (we3) 
+         rf [wa3] <= wd3;	
+  assign rd1 = (ra1 != 0) ? rf [ra1] : 0;
+  assign rd2 = (ra2 != 0) ? rf[ ra2] : 0;
+endmodule
+module alu(input  logic [31:0] a, b, 
+           input  logic [2:0]  alucont, 
+           output logic [31:0] result,
+           output logic zero);
+    always_comb
+        case(alucont)
+            3'b010: result = a + b;
+            3'b110: result = a - b;
+            3'b000: result = a & b;
+            3'b001: result = a | b;
+            3'b111: result = (a < b) ? 1 : 0;
+            default: result = {32{1'bx}};
+        endcase
+    assign zero = (result == 0) ? 1'b1 : 1'b0;
+endmodule
+module adder (input  logic[31:0] a, b,
+              output logic[31:0] y);
+     
+     assign y = a + b;
+endmodule
+
+module sl2 (input  logic[31:0] a,
+            output logic[31:0] y);
+     
+     assign y = {a[29:0], 2'b00}; // shifts left by 2
+endmodule
+
+module signext (input  logic[15:0] a,
+               output logic[31:0] y);
+ assign y = {{16{a[15]}}, a};    // sign-extends 16-bit a
+endmodule
+// parameterized register
+module flopr #(parameter WIDTH = 8)
+              (input logic clk, reset, 
+	       input logic[WIDTH-1:0] d, 
+               output logic[WIDTH-1:0] q);
+  always_ff@(posedge clk, posedge reset)
+    if (reset) q <= 0; 
+    else       q <= d;
+endmodule
+// paramaterized 2-to-1 MUX
+module mux2 #(parameter WIDTH = 8)
+             (input  logic[WIDTH-1:0] d0, d1,  
+              input  logic s, 
+              output logic[WIDTH-1:0] y);
+  
+   assign y = s ? d1 : d0; 
+endmodule
+module mux4 (
+    input logic [3:0] data,
+    input logic [1:0] sel,
+    output logic out);
+    assign out = (sel == 2'b00) ? data[0] :
+                (sel == 2'b01) ? data[1] :
+                (sel == 2'b10) ? data[2] :
+                (sel == 2'b11) ? data[3] :
+                1'bx; // Default case (undefined)
+endmodule
+
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: 
+// Engineer: 
+// 
+// Create Date: 24.11.2023 13:36:51
+// Design Name: 
+// Module Name: tb
+// Project Name: 
+// Target Devices: 
+// Tool Versions: 
+// Description: 
+// 
+// Dependencies: 
+// 
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+// 
+//////////////////////////////////////////////////////////////////////////////////
+module topTB();
+
+    // instance variables
+    logic  clk, reset;
+    logic[31:0]  instrF;
+    logic[31:0] PC, PCF;
+    logic PcSrcD;
+    logic MemWriteD, MemtoRegD, ALUSrcD, BranchD, RegDstD, RegWriteD;
+    logic [2:0]  alucontrol;
+    logic [31:0] instrD;
+    logic [31:0] ALUOutE, WriteDataE;
+    logic [1:0] ForwardAE, ForwardBE;
+    logic ForwardAD, ForwardBD;
+    logic [31:0] SrcAE,SrcBE;
+    logic ALURDSrc;
+    
+    // device under test initialization
+    topMips mips(clk, reset,instrF,PC, PCF,PcSrcD,
+    MemWriteD, MemtoRegD, ALUSrcD, BranchD, RegDstD, RegWriteD,
+             alucontrol,
+              instrD, 
+             ALUOutE, WriteDataE,
+             ForwardAE, ForwardBE,
+             ForwardAD, ForwardBD,
+              SrcAE,SrcBE, 
+              ALURDSrc );
+    
+    // start test
+    initial
+        begin
+        clk = 0;
+        reset = 1;
+        #10ns; 
+        reset = 0;
+        end
+    
+    always
+        begin
+            #5;
+            clk = ~clk;
+        end
+        
+endmodule
+

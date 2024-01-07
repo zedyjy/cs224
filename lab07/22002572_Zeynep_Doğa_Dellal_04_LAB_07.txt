@@ -1,0 +1,143 @@
+CS224 / Lab No 07
+Sec No: 04
+Zeynep Doğa Dellal
+22002572
+15/12/2023
+
+///////////////////////////////////////
+
+CS224 / Lab No 07
+Sec No: 04
+Ali Doğaç Urkaya
+15/12/2023
+
+/*
+Attention!
+Configuration  for dc motor project :
+
+Connect portA to motor 
+Jumpers of portA are : 5V, pull up ( both of the to the left side )
+
+Connect portE to push-buttons
+Jumpers of portE are : 3V3, pull up ( top one to right, other to left )
+
+*/
+
+void Wait() {
+ Delay_ms(1000);
+}
+
+void main() {
+
+ AD1PCFG = 0xFFFF;
+
+ DDPCON.JTAGEN = 0; // disable JTAG
+
+ TRISA = 0x0000;  //portA is output to turn on LEDs.
+ TRISE = 0XFFFF;  //portE is inputs to read push-buttons.
+
+ //LATA = 0XFFFF;
+ //LATE = 0X0000;
+ PORTE = 0xFFFF;
+
+ while(1)
+ {
+   if (PORTEbits.RE0 == 1 && PORTEbits.RE1 == 1 ) //Motor not moving if both are turned on
+   {
+	   PORTAbits.RA1 = 0;
+	   PORTAbits.RA2 = 0;
+   }
+   else if ( PORTEbits.RE0 == 1) // clockwise
+   {
+	   PORTAbits.RA1 = 1;
+   }
+   else if ( PORTEbits.RE1 == 1) //counter clockwise
+   {
+	   PORTAbits.RA2 = 1;
+   }
+  
+ }//while
+
+}//main
+
+///////////////////////SEVEN SEGMENT
+
+#include <stdint.h>
+#include <stdbool.h>
+
+// Hexadecimal values for digits in 7 segment
+unsigned char sevenSegmentDigits[] = {0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F};
+
+// Function to calculate the next number in the sequence (1234, 2345, 3456, ...)
+uint32_t calculateNextNumber(uint8_t x) {
+         if (x == 9) {
+            return 9123;
+        }
+        if (x == 8) {
+            return 8912;
+        }
+        if (x == 7) {
+            return 7891;
+        }
+    return (x * 1000) + ((x + 1) * 100) + ((x + 2) * 10) + (x + 3);
+}
+
+void main() {
+    uint8_t inputValue = 1;
+    uint32_t nextNumber;
+    uint8_t count = 0;
+
+    AD1PCFG = 0xFFFF;           // Configure AN pins as digital I/O
+
+     // Disable JTAG (Joint Test Action Group).
+    // Disabling JTAG allows pins to be used as general-purpose I/O pins.
+    JTAGEN_bit = 0;
+
+    // Configure portA as output for the seven-segment display
+    TRISA = 0x00;
+
+    // Configure portE as output for controlling the segments of the seven-segment display
+    TRISE = 0x00;
+
+    while (1) { //Always prints
+                                        // Reset inputValue to 1 if it exceeds 10 (to start the sequence again)
+        if (inputValue > 9) {
+            inputValue = 1;
+        }
+        
+        // Calculate the number to be displayed
+        nextNumber = calculateNextNumber(inputValue);
+
+        // Display the next number on the seven-segment
+        PORTA = sevenSegmentDigits[(nextNumber / 1) % 10];           // Display the first digit
+        PORTE = 0x08;                                          // Open the first digit
+        Delay_ms(1);				       //Delay 1 ms between the displays
+
+        PORTA = sevenSegmentDigits[(nextNumber / 10) % 10];    // Display the second digit
+        PORTE = 0x04;                                          // Open the second digit
+       	Delay_ms(1);					//Delay 1 ms between the displays
+
+        PORTA = sevenSegmentDigits[(nextNumber / 100) % 10];   // Display the third digit
+        PORTE = 0x02;                                          // Open the third digit
+        Delay_ms(1);						//Delay 1 ms between the displays
+
+        PORTA = sevenSegmentDigits[(nextNumber / 1000) % 10];  // Display the fourth digit
+        PORTE = 0x01;                                          // Open the fourth digit
+        Delay_ms(1);					       //Delay 1 ms between the displays
+
+        count++;
+
+
+        
+        if(count>100){
+              // Increment inputValue for the next iteration
+              inputValue++;
+              count=0;
+        }
+        
+
+        // Wait 1s between each output
+        //Delay_ms(800);
+
+    }
+}

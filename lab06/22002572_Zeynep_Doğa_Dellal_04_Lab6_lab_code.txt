@@ -1,0 +1,267 @@
+#CS224
+#Lab No: 06
+#Section No: 04
+#Zeynep Doğa Dellal
+#22002572
+#6.12.2023
+
+
+.text
+.globl __start
+
+__start:
+    jal main
+    li $v0, 10 # Stop execution
+    syscall
+
+# Subprogram to display the matrix element at the specified position
+# $a0 contains the row number and $a1 contains the column number as parameters
+display_element:
+    move $t2, $a0       # Copy row to $t2
+    move $t3, $a1       # Copy column to $t3
+    subi $t2, $t2, 1    # Convert to 0-based index
+    subi $t3, $t3, 1    # Convert to 0-based index
+    mul $t2, $t2, $matrix_size     # Calculate row offset
+    add $t2, $t2, $t3              # Calculate element offset
+    mul $t2, $t2, 4                # Convert offset to bytes
+    add $t2, $t2, $matrix_base      # Add base address to get the memory address of the specified element
+
+    li $v0, 4            # Print result_element string
+    la $a0, result_element
+    syscall
+    li $v0, 1            # Print specified element
+    lw $a0, 0($t2)
+    syscall
+    jr $ra               # Return
+
+
+
+# Subprogram to display the row and column of the specified matrix element
+# $a0 contains the specified matrix element as a parameter
+display_position:
+    move $t0, $a0        # Copy the total index to $t0
+    div $t0, $matrix_size
+    mflo $t0             # $t0 holds the row
+    mfhi $t1             # $t1 holds the column
+    addi $t1, $t1, 1     # Convert to 1-based index (column)
+    j display
+
+display:
+    li $v0, 4            # Display result_row string
+    la $a0, result_row
+    syscall
+
+    li $v0, 1            # Display row
+    move $a0, $t0
+    syscall
+
+    li $v0, 4            # Display result_column string
+    la $a0, result_column
+    syscall
+
+    li $v0, 1            # Display column
+    move $a0, $t1
+    syscall
+
+    jr $ra               # Return
+
+
+# Subprogram to fill the matrix
+fill_matrix:
+    li $t0, 1
+	fill_loop:
+    		sw $t0, 0($matrix_base)
+    		addi $matrix_base, $matrix_base, 4
+    		addi $t0, $t0, 1
+    		ble $t0, $matrix_size, fill_loop
+
+    jr $ra
+
+
+# Subprogram to find and display the summation of the elements of a matrix by row major summation
+# Displays the resulting summation
+add_row_by_row:
+     move $t1, $zero       # $t1 holds the summation
+    li $t2, 0             # $t2 holds the index (column)
+    li $t3, 0             # $t3 holds the index (row)
+
+row_major_loop:
+    mul $t4, $t3, $matrix_size   # Calculate the offset for row
+    add $t4, $t4, $t2            # Add column index to offset
+    add $t4, $matrix_base, $t4    # Calculate the memory address
+
+    lw $t0, 0($t4)        # Load the value from matrix
+    add $t1, $t1, $t0      # Add the value to summation
+
+    addi $t2, $t2, 1       # Increment column index
+    bge $t2, $matrix_size, next_row   # Check if column index exceeds matrix size
+
+    j row_major_loop       # Continue with the next element in the same row
+
+next_row:
+    addi $t3, $t3, 1       # Move to the next row
+    li $t2, 0              # Reset column index to 0
+    bge $t3, $matrix_size, done      # Check if all rows are processed
+
+    j row_major_loop       # Continue with the next row
+
+done:
+    li $v0, 4              # Display the result_sum string
+    la $a0, result_sum
+    syscall
+    li $v0, 1
+    move $a0, $t1          # Display the summation
+    syscall
+
+    jr $ra                # Return
+
+
+# Subprogram to find and display the summation of the elements of a matrix by column major summation
+# Displays the resulting summation
+add_column_by_column:
+    move $t1, $zero        # $t1 holds the summation
+    li $t2, 0              # $t2 holds the index (row)
+    li $t3, 0              # $t3 holds the index (column)
+
+column_major_loop:
+    mul $t4, $t2, $matrix_size  # Calculate the offset for row
+    add $t4, $t4, $t3           # Add column index to offset
+    add $t4, $matrix_base, $t4   # Calculate the memory address
+
+    lw $t0, 0($t4)        # Load the value from matrix
+    add $t1, $t1, $t0      # Add the value to summation
+
+    addi $t2, $t2, 1       # Increment row index
+    bge $t2, $matrix_size, next_column  # Check if row index exceeds matrix size
+
+    j column_major_loop   # Continue with the next element in the same column
+
+next_column:
+    addi $t3, $t3, 1       # Move to the next column
+    li $t2, 0              # Reset row index to 0
+    bge $t3, $matrix_size, done       # Check if all columns are processed
+
+    j column_major_loop   # Continue with the next column
+
+done:
+    li $v0, 4              # Display the result_sum string
+    la $a0, result_sum
+    syscall
+    li $v0, 1
+    move $a0, $t1          # Display the summation
+    syscall
+
+    jr $ra                # Return
+
+
+# A subprogram that calls the subprograms and controls the user experience
+main:
+    subi $sp, $sp, 4 #save the return addres
+	sw $ra, 0($sp)
+	li $v0, 4 
+	la $a0, intro #display the intro
+
+# Subprogram to print user's options
+print_options:
+    li $v0, 4
+    la $a0, intro
+    syscall
+    li $t1, '1'
+    li $t2, '2'
+    li $t3, '3'
+    li $t4, '4'
+    li $t5, '5'
+    li $t6, '6'
+    li $t0, 'q'
+    main_loop:
+        li $v0, 12  # Reading a character
+        syscall  # Different cases regarding different menu options
+        move $s3, $v0
+        beq $s3, $t1, case1
+        beq $s3, $t2, case2
+        beq $s3, $t3, case3
+        beq $s3, $t4, case4
+        beq $s3, $t5, case5
+        beq $s3, $t6, case6
+        beq $s3, $t0, default
+        j main_loop
+
+case1:  # Read the size of the matrix
+    li $v0, 4
+    la $a0, prompt1
+    syscall
+    li $v0, 5
+    syscall
+    move $matrix_size, $v0  # $matrix_size has the size of the matrix from now on
+    mul $matrix_elements, $matrix_size, $matrix_size  # Number of elements in the matrix is in $matrix_elements from now on
+    j main_loop
+
+case2:  # Allocate and initialize matrix
+    mul $a0, $matrix_elements, 4  # Compute number of bytes to allocate for the matrix
+    li $v0, 9  # Allocate heap memory
+    syscall  # $v0 has the base address of the matrix
+    move $matrix_base, $v0  # $matrix_base has the base address of the matrix from now on
+    jal fill_matrix
+    j main_loop
+
+case3:  # Access and display a certain element
+    li $v0, 4  # Prompt for and read the row and column of the specified element
+    la $a0, prompt2
+    syscall
+    li $v0, 5
+    syscall
+    move $t0, $v0  # $t0 holds the row number
+    li $v0, 4
+    la $a0, prompt3
+    syscall
+    li $v0, 5
+    syscall
+    move $a1, $v0  # $a1 holds the column number
+    move $a0, $t0  # $a0 holds the row number
+    jal display_element  # Call the subprogram to display the specified element
+    j main_loop
+
+case4:  # Summation of matrix elements by row-major summation
+    jal add_row_by_row
+    j main_loop
+
+case5:  # Summation of matrix elements by column-major summation
+    jal add_column_by_column
+    j main_loop
+
+case6:  # Get row and column of an element
+    li $v0, 4  # Print a prompt to read the element
+    la $a0, prompt4
+    syscall
+    li $v0, 5  # Read the element
+    syscall
+    move $a0, $v0  # $a0 has the element
+    jal display_position  # Call subprogram with the element as a parameter
+    j main_loop
+
+default:
+    bnez $s3, main_loop  # If not 'q', go back to the main loop
+    jr $ra  # Return
+
+
+.data
+.data
+intro:          .asciiz     "This program initializes a matrix and performs various operations on it."
+option1:        .asciiz     "\n\n1 - Enter the size in terms of the matrix's dimension (N)."
+option2:        .asciiz     "\n2 - Allocate and initialize an array for the matrix with the appropriate size."
+option3:        .asciiz     "\n3 - Access and display a specific element of the matrix."
+option4:        .asciiz     "\n4 - Calculate the summation of matrix elements using row-major (row by row) summation."
+option5:        .asciiz     "\n5 - Calculate the summation of matrix elements using column-major (column by column) summation."
+option6:        .asciiz     "\n6 - Display a desired element of the matrix by specifying its row and column."
+optionQ:        .asciiz     "\nq - Quit.\n\n"
+prompt1:        .asciiz     "\nEnter the size of the matrix: "
+prompt2:        .asciiz     "\nEnter the row of the desired element: "
+prompt3:        .asciiz     "\nEnter the column of the desired element: "
+prompt4:        .asciiz     "\nEnter the value for the element: "
+result_sum:     .asciiz     "\nThe summation of the matrix elements is: "
+result_element: .asciiz     "\nThe element at the specified position is: "
+result_row:     .asciiz     "\nThe row number of the specified element is: "
+result_column:  .asciiz     "\nThe column number of the specified element is: "
+matrix_size:        .word 0
+matrix_elements:    .word 0
+matrix_base:        .space 0

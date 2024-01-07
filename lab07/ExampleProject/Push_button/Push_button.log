@@ -1,0 +1,16 @@
+0	1	mikroCPIC32.exe -MSF -DBG -pP32MX795F512L -DL -SSA -EBASE 0x9FC01000 -INTDEF MV_SRS7_IS32 -O11111114 -fo80 -N"C:\Users\zeyne\Dropbox\My PC (LAPTOP-UIF680BP)\Desktop\ExampleProject\Push_button\Push_button.mcp32" -SP"C:\Users\Public\Documents\Mikroelektronika\mikroC PRO for PIC32\Defs\" -SP"C:\Users\Public\Documents\Mikroelektronika\mikroC PRO for PIC32\Uses\" -SP"C:\Users\zeyne\Dropbox\My PC (LAPTOP-UIF680BP)\Desktop\ExampleProject\Push_button\" -SP"E:\Users\Hamzeh\Dropbox\Academic\Courses\Computer Organization_Bilkent\2015 Spring\LAB9\Example Projects\Push_button\" -SP"C:\Program Files\Mikroelektronika\mikroC PRO for PIC32\defs\" -SP"C:\Program Files\Mikroelektronika\mikroC PRO for PIC32\uses\" -SP"\\Mybooklive\Public\Server\ORTAK\MURAT\gelistirme\beti_pic32_egitim_seti\beti_Pic32_egitim_seti_kodlar_isimleri_degismis\Push_button\" -IP"C:\Users\Public\Documents\Mikroelektronika\mikroC PRO for PIC32\Uses\" -IP"C:\Users\zeyne\Dropbox\My PC (LAPTOP-UIF680BP)\Desktop\ExampleProject\Push_button\" "Push_button.c" "__Lib_CP0.emcl" "__Lib_Math.emcl" "__Lib_MathDouble.emcl" "__Lib_System.emcl" "__Lib_SoftResetDma.emcl" "__Lib_Delays.emcl"	 
+warning: 0	1501	Specified search path does not exist: 'E:\Users\Hamzeh\Dropbox\Academic\Courses\Computer Organization_Bilkent\2015 Spring\LAB9\Example Projects\Push_button'	 
+warning: 0	1501	Specified search path does not exist: 'C:\Program Files\Mikroelektronika\mikroC PRO for PIC32\defs'	 
+warning: 0	1501	Specified search path does not exist: 'C:\Program Files\Mikroelektronika\mikroC PRO for PIC32\uses'	 
+warning: 0	1501	Specified search path does not exist: '\\Mybooklive\Public\Server\ORTAK\MURAT\gelistirme\beti_pic32_egitim_seti\beti_Pic32_egitim_seti_kodlar_isimleri_degismis\Push_button'	 
+diagnostics: 0	122	Compilation Started	Push_button.c
+diagnostics: 28	123	Compiled Successfully	Push_button.c
+diagnostics: 0	127	All files Compiled in 47 ms	 
+hint: 0	1144	Used RX: 11 (34%)   Free RX: 21 (66%)	Used RX: 11 (34%)   Free RX: 21 (66%)
+hint: 0	1144	Static RAM (bytes): 0   Dynamic RAM (bytes): 131069	Static RAM (bytes): 0   Dynamic RAM (bytes): 131069
+hint: 0	1144	Used ROM (bytes): 284 (0%)  Free ROM (bytes): 524004 (100%)	Used ROM (bytes): 284 (0%)  Free ROM (bytes): 524004 (100%)
+hint: 0	1144	Used BOOTROM (bytes): 320 (3%)  Free BOOTROM (bytes): 11953 (97%)	Used BOOTROM (bytes): 320 (3%)  Free BOOTROM (bytes): 11953 (97%)
+diagnostics: 0	125	Project Linked Successfully	Push_button.mcp32
+diagnostics: 0	128	Linked in 156 ms	 
+diagnostics: 0	129	Project 'Push_button.mcp32' completed: 359 ms	 
+diagnostics: 0	103	Finished successfully: 15 Ara 2023, 15:46:18	Push_button.mcp32

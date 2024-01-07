@@ -1,0 +1,143 @@
+CS224 / Lab No 07
+Sec No: 04
+Zeynep Doğa Dellal
+22002572
+13/12/2023
+
+############################## PART A ######################################
+/*
+SFRs: TRISx (for I/O determination), PORTx (push)
+TRISx: TRISx is to determine i/o direction of the GPIO port. 
+The "x" in TRISx is the port letter. 
+PORTx: It tells you if a button is pressed or not. 
+*/
+############################## PART B ######################################
+/*
+Project Hardware Configuration:
+- Connect portA to the DC motor.
+- For portA jumpers, set both to the left side with a 5V pull-up.
+- Connect portE to push-buttons.
+- For portF jumpers, set the top one to the right and the other to the left with a 3V3 pull-up.
+*/
+
+void main() {
+    // Configure the Analog-to-Digital Converter (ADC) pins as digital I/O.
+    // This ensures that the pins originally designated for analog input are now configured for digital I/O.
+    AD1PCFG = 0xFFFF;
+
+    // Disable JTAG (Joint Test Action Group).
+    // Disabling JTAG allows pins to be used as general-purpose I/O pins.
+    DDPCON.JTAGEN = 0;
+
+    // Set pins in portA as outputs.
+    TRISA = 0x0000;
+
+    // Set pins in portF as inputs.
+    TRISF = 0xFFFF;
+
+    while (1) {
+        // Capture the state of input pins from portF.
+        // portFbits.RF0 corresponds to push button 0, and portFbits.RF1 corresponds to push button 1.
+
+        // Combine the state of RF0 and RF1 into a single variable for switch statement
+        unsigned int buttonState = (portFbits.RF1 << 1) | portFbits.RF0;
+
+        switch (buttonState) {
+            case 0b01:  // Button 0 pressed, Button 1 not pressed
+                // Set RA2 pin to low for clockwise rotation.
+                PORTA = 0xFFFD; // Binary: 1101
+                break;
+
+            case 0b10:  // Button 0 not pressed, Button 1 pressed
+                // Set RA1 pin to low for counterclockwise rotation.
+                PORTA = 0xFFFB; // Binary: 1011
+                break;
+
+            case 0b00:  // Both buttons pressed
+                // Set RA0 pin to low for an instant stop.
+                PORTA = 0xFFFE; // Binary: 1110
+                break;
+
+            default:  // Default state or other combinations
+                break;
+        }
+    }
+}
+
+############################## PART C ######################################
+/*
+SFRs: TRISx (for I/O determination), PORTx (push)
+TRISx: TRISx is to determine i/o direction of the GPIO port. 
+The "x" in TRISx is the port letter. 
+PORTx: It tells you if a button is pressed or not. 
+*/
+############################## PART D ######################################
+/*
+Configuration for part D:
+-Connect portA to J1 Port
+-PORTA jumpers are 5V and pull down ( top one to left, other to right )
+-Connect portE to J2 Port
+-PORTE jumpers are 5V and pull down ( top one to left, other to right )
+*/
+
+#include <xc.h>
+#include <stdint.h>
+#include <stdbool.h>
+
+// Hexadecimal values for digits in 7 segment
+unsigned char sevenSegmentDigits[] = {0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F};    
+
+// Function to calculate the next number in the sequence (1234, 2345, 3456, ...)
+uint32_t calculateNextNumber(uint8_t x) {
+    return (x * 1000) + ((x + 1) * 100) + ((x + 2) * 10) + (x + 3);
+}
+
+void main() {
+    uint8_t inputValue = 1;
+    uint32_t nextNumber;
+
+    AD1PCFG = 0xFFFF;           // Configure AN pins as digital I/O
+    
+     // Disable JTAG (Joint Test Action Group).
+    // Disabling JTAG allows pins to be used as general-purpose I/O pins.
+    JTAGEN_bit = 0;             
+
+    // Configure portA as output for the seven-segment display
+    TRISA = 0x00;   
+            
+    // Configure portE as output for controlling the segments of the seven-segment display
+    TRISE = 0x00;             
+
+    while (1) { //Always prints
+        // Calculate the number to be displayed
+        nextNumber = calculateNextNumber(inputValue);
+
+        // Display the next number on the seven-segment
+        PORTA = sevenSegmentDigits[nextNumber % 10];           // Display the first digit
+        PORTE = 0x08;                                          // Open the first digit
+        Delay_ms(1);					       //Delay 1 ms between the displays
+
+        PORTA = sevenSegmentDigits[(nextNumber / 10) % 10];    // Display the second digit
+        PORTE = 0x04;                                          // Open the second digit
+        Delay_ms(1);						//Delay 1 ms between the displays
+
+        PORTA = sevenSegmentDigits[(nextNumber / 100) % 10];   // Display the third digit
+        PORTE = 0x02;                                          // Open the third digit
+        Delay_ms(1);						//Delay 1 ms between the displays
+
+        PORTA = sevenSegmentDigits[(nextNumber / 1000) % 10];  // Display the fourth digit
+        PORTE = 0x01;                                          // Open the fourth digit
+        Delay_ms(1);					       //Delay 1 ms between the displays
+
+        // Increment inputValue for the next iteration
+        inputValue++;
+
+        // Reset inputValue to 1 if it exceeds 10 (to start the sequence again)
+        if (inputValue > 10) {
+            inputValue = 1;
+        }
+
+        // Wait 1s between each output
+        Delay_ms(9996);
+    }
+}

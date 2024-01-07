@@ -1,0 +1,518 @@
+################################################################
+#CS224
+#Lab No: 01
+#Section No: 04
+#Zeynep Doğa Dellal
+#22002572
+#6.10.2023
+################################################################ 
+##
+## Program1.asm - prints out "hello world"
+##
+##	a0 - points to the string
+##
+
+#################################
+#					 	#
+#		text segment		#
+#						#
+#################################
+
+	.text		
+
+# execution starts here
+	la $a0,str	# put string address into a0
+	li $v0,4	# system call to print
+	syscall		#   out a string
+
+	li $v0,10  # system call to exit
+	syscall	#    bye bye
+
+
+#################################
+#					 	#
+#     	 data segment		#
+#						#
+#################################
+
+	.data
+str:	.asciiz "hello Onur\n"
+n:	.word	10
+
+##
+## end of file Program1.asm
+
+
+################################################################
+#calculation
+#CS224
+#Lab No: 01
+#Section No: 04
+#Zeynep Doğa Dellal
+#22002572
+#6.10.2023
+################################################################ 
+##
+## Program2.asm asks user for temperature in Celsius,
+##  converts to Fahrenheit, prints the result.
+##
+##	v0 - reads in Celsius
+##	t0 - holds Fahrenheit result
+##	a0 - points to output strings
+##
+
+#################################
+#					 	#
+#		text segment		#
+#						#
+#################################
+
+	.text			
+
+	la $a0,prompt	# output prompt message on terminal
+	li $v0,4	# syscall 4 prints the string
+	syscall
+
+	li $v0, 5	# syscall 5 reads an integer
+	syscall
+
+	mul $t0,$v0,9	# to convert,multiply by 9,
+	div $t0,$t0,5	# divide by 5, then
+	add $t0,$t0,32	# add 32
+
+	la $a0,ans1	# print string before result
+	li $v0,4
+	syscall
+
+	move $a0,$t0	# print integer result
+	li $v0,1		# using syscall 1
+	syscall
+
+	la $a0,endl	# system call to print
+	li $v0,4		# out a newline
+	syscall
+
+	li $v0,10		# system call to exit
+	syscall		#    bye bye
+
+
+#################################
+#					 	#
+#     	 data segment		#
+#						#
+#################################
+
+	.data
+prompt:	.asciiz "Enter temperature (Celsius): "
+ans1:	.asciiz "The temperature in Fahrenheit is "
+endl:	.asciiz "\n"
+
+##
+## end of file Program2.asm
+
+################################################################
+#calculation
+#CS224
+#Lab No: 01
+#Section No: 04
+#Zeynep Doğa Dellal
+#22002572
+#6.10.2023
+################################################################ 
+##
+#CS224
+#Lab No: 01
+#Section No: 04
+#Zeynep Doğa Dellal
+#22002572
+#6.10.2023
+##	Program3.asm is a loop implementation
+##	of the Fibonacci function
+##        
+
+#################################
+#					 	#
+#		text segment		#
+#						#
+#################################
+
+	.text		
+.globl __start
+ 
+__start:		# execution starts here
+	li $a0,7	# to calculate fib(7)
+	jal fib		# call fib
+	move $a0,$v0	# print result
+	li $v0, 1
+	syscall
+
+	la $a0,endl	# print newline
+	li $v0,4
+	syscall
+
+	li $v0,10
+	syscall		# bye bye
+
+#------------------------------------------------
+
+
+fib:	move $v0,$a0	# initialise last element
+	blt $a0,2,done	# fib(0)=0, fib(1)=1
+
+	li $t0,0	# second last element
+	li $v0,1	# last element
+
+loop:	add $t1,$t0,$v0	# get next value
+	move $t0,$v0	# update second last
+	move $v0,$t1	# update last element
+	sub $a0,$a0,1	# decrement count
+	bgt $a0,1,loop	# exit loop when count=0
+done:	jr $ra
+
+#################################
+#					 	#
+#     	 data segment		#
+#						#
+#################################
+
+	.data
+endl:	.asciiz "\n"
+
+##
+## end of Program3.asm
+
+################################################################
+#CS224
+#Lab No: 01
+#Section No: 04
+#Zeynep Doğa Dellal
+#22002572
+#6.10.2023
+
+##CALCULATION IN LAB
+################################################################ 
+   .data
+    getA: .asciiz "Please enter number a: "
+    getB: .asciiz "Please enter number b: "
+    getC: .asciiz "Please enter number c: "
+    getD: .asciiz "Please enter number d: "
+    numA: .word  0 # int user input (4 bytes)
+    errorMsg:	.asciiz "a mod c is zero. Calculation cannot continue"
+    result: .asciiz "A= "
+    newline: .asciiz "\n"
+    .text
+    .globl start    
+
+start:
+    li $v0,4  # syscall 4 prints the string
+    la $a0,getB    # get size of the array
+    syscall
+    # Read integer input
+    li $v0, 5
+    syscall
+    move $t1, $v0 # $t1 = b
+    
+    li $v0,4  # syscall 4 prints the string
+    la $a0,getC    # get size of the array
+    syscall
+    # Read integer input
+    li $v0, 5
+    syscall
+    move $t2, $v0 # $t2 = c
+    
+    li $v0,4  # syscall 4 prints the string
+    la $a0,getD    # get size of the array
+    syscall
+    # Read integer input
+    li $v0, 5
+    syscall
+    move $t3, $v0 # $t3 = d
+    
+    li $a1, 3
+    div $t1, $a1
+    mflo $t4 #t4=b/3
+    
+    mult $t4, $t3
+    mflo $t4
+    
+    subi $t4, $t4,5
+    add $t4, $t4, $t1
+    
+    div $t4, $t2
+    mfhi $t4
+    
+        # Print the result
+    li $v0, 4
+    la $a0, result
+    syscall
+
+    li $v0, 1
+    move $a0, $t4
+    syscall
+
+    # Exit the program
+    li $v0, 10
+    syscall
+    
+############################################################################
+#CS224
+#Lab No: 01
+#Section No: 04
+#Zeynep Doğa Dellal
+#22002572
+#4.10.2023
+#max menu
+
+    	.data
+array:  .space 400
+	.align 2 # Allocate 80 bytes = space enough to hold 20 words
+getSize: .asciiz "Please enter a number less than 100: "
+arraySizeZeroMsg: .asciiz "Array size is zero, no elements to display or reverse."
+negatifNumberMsg: .asciiz "Array size cannot be less than zero"
+moreThan20Msg: .asciiz "Array size cannot be more than 100"
+menuChoice: .asciiz "\nChoose one of the options below to operate:\n 1-)Find max in the array\n2-)Find maximum count\n3-)Find how many numbers are there that can divide the maximum number without a remainder\n4-) Quit\n Please enter your choice: "
+arraySize: .word  0 # int user input (4 bytes)
+openParanthesis: .asciiz "["
+closeParanthesis: .asciiz "]  "
+resultMsg: .asciiz "The result is: "
+inputChoice: .word 0
+getArrayMembersMsg: .asciiz "Please enter the array member: "
+endl:	.asciiz "\n"
+count: .word 0
+    .text
+    .globl start    
+
+start:
+	li $v0, 4 
+	la $a0, getSize
+	syscall
+	
+	li $v0, 5
+	syscall
+	
+	sw $v0, arraySize
+    	move $t4, $v0
+
+    	# Array size is now in register t0
+    	lw $t0, arraySize
+    	
+    	beq $t0, $zero, zeromsg
+    	blt $t0, $zero, negNumberMsg
+    	bgt $t0, 100, moreThan20
+    	
+    	# Load array pointer into $s0
+    	la $s0, array
+    	addi $t1, $t1, 0
+    	
+    	jal	populateArray
+    	
+    	jal 	displayArray
+
+choice:
+    	li $v0, 4 
+	la $a0, menuChoice
+	syscall
+	
+	li $v0, 5
+	syscall
+	
+	sw $v0, inputChoice
+    	move $a1, $v0
+    	
+    	li $t3, 1
+    	li $t7, 2
+    	li $t5, 3
+    	li $t6, 4
+    	
+    	beq $a1, $t3, go1
+    	
+    	beq $a1, $t7, go2
+    	
+    	beq $a1, $t5, go3
+    	
+    	beq $a1, $t6, quit
+
+go1:
+	jal findMax
+	
+	li $v0, 4 
+	la $a0, resultMsg
+	syscall
+	
+	li $v0, 1
+    	move $a0, $t0
+    	syscall
+    	j choice
+go2:
+	jal findMax
+	jal findMaxCount
+	
+	li $v0, 4 
+	la $a0, resultMsg
+	syscall
+	
+	li $v0, 1
+    	move $a0, $s2
+    	syscall
+    	j choice
+go3:
+	jal findDivisibleCount
+	
+	li $v0, 4 
+	la $a0, resultMsg
+	syscall
+	
+	li $v0, 1
+    	move $a0, $s2
+    	syscall
+    	j choice
+
+    	j quit
+	
+populateArray:
+	beq $t1, $t0, done
+	la $a0,getArrayMembersMsg	#get array members
+	li $v0,4	# syscall 4 prints the string
+	syscall
+	
+	# read integer input
+   	li $v0, 5
+    	syscall
+    
+    	# store input in array
+    	sw $v0, ($s0)
+    
+    	# increment array index and pointer
+    	addi $s0, $s0, 4
+ 	addi $t1, $t1, 1     # decrement array size count
+ 	j populateArray
+
+
+displayArray:
+	# Load array pointer into $s0
+	la $s0, array
+	lw $t1, arraySize
+
+	loop:
+	beq $t1, $0, done
+    
+    	la $a0, openParanthesis	#get array members
+	li $v0,4	# syscall 4 prints the string
+	syscall
+    	# Print array element
+    	lw $a0, ($s0)
+    	li $v0, 1
+    	syscall
+    	
+    	la $a0, closeParanthesis	#get array members
+	li $v0,4	# syscall 4 prints the string
+	syscall
+    	
+    	# increment array index and pointer
+    	addi $s0, $s0, 4
+    	subi $t1, $t1, 1     # decrement array size count
+    	j loop
+    	
+findMax:
+	la $s0, array
+	lw $s1, arraySize
+	lw $t0, 0($s0)
+	add $s0, $s0, 4
+	loopFindMax:
+		beq $s1, $0, done
+		lw $t1, 0($s0)
+		blt $t0, $t1, changeCurrMax  
+		addi $s1, $s1, -1
+		addi $s0, $s0, 4
+    		j loopFindMax
+    	
+    	changeCurrMax:
+    		move $t0, $t1
+    		subi $s1, $s1, 1
+		addi $s0, $s0, 4
+    		j loopFindMax
+    		
+findMaxCount:
+	la $s0, array
+	lw $s1, arraySize
+	li $s2, 0
+	findMaxCountLoop:
+		beq $s1, $zero, done
+		lw $t1, 0($s0)
+		beq $t1, $t0, incrementCount
+		addi $s1, $s1, -1
+		addi $s0, $s0, 4
+		j findMaxCountLoop
+		
+	incrementCount:
+		addi $s2, $s2, 1
+		addi $s1, $s1, -1
+		addi $s0, $s0, 4
+		j findMaxCountLoop
+		
+findDivisibleCount:
+	la $s0, array
+	lw $s1, arraySize
+	li $s2, 0
+	findDivisibleCountLoop:
+		beq $s1, $zero, done
+		lw $t1, 0($s0)
+		div $t0, $t1
+		mfhi $t2
+		beq $t1, $t0, skip
+		beq $t2, $0, incrementCountDiv
+		li $t2, 0
+		addi $s1, $s1, -1
+		addi $s0, $s0, 4
+		j findDivisibleCountLoop
+		
+	skip:
+		addi $s1, $s1, -1
+		addi $s0, $s0, 4
+		li $t2, 0
+		j findDivisibleCountLoop
+	
+	incrementCountDiv:
+		li $t2, 0
+		addi $s2, $s2, 1
+		addi $s1, $s1, -1
+		addi $s0, $s0, 4
+		j findDivisibleCountLoop
+		
+		
+		
+    		
+done:
+	jr $ra
+	
+zeromsg:
+	li $v0, 4 
+	la $a0, arraySizeZeroMsg
+	syscall
+	li $v0, 4 
+	la $a0, endl
+	syscall
+	j start
+	
+negNumberMsg:
+	li $v0, 4 
+	la $a0, negatifNumberMsg
+	syscall
+	li $v0, 4 
+	la $a0, endl
+	syscall
+	j start
+
+moreThan20:
+	li $v0, 4 
+	la $a0, moreThan20Msg
+	syscall
+	li $v0, 4 
+	la $a0, endl
+	syscall
+	j start
+    	
+quit:
+	# Exit the program
+    	li $v0, 10
+    	syscall
